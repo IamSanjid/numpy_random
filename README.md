@@ -6,6 +6,9 @@ There's no extra dependency required. Just build and grab the `src/numpy_random.
 ```c++
 template <typename RngEngine>
 class RandomState {
+    /*...*/
+public:
+    /*...*/
     RngEngine& get_engine() { /*...*/ }
     
     /* Only these distributions are implemented for now.. */
@@ -30,6 +33,8 @@ class RandomState {
 
     template <typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
     T rand_n() { /*...*/ }
+    
+    /*...*/
 }
 ```
 
@@ -83,16 +88,19 @@ Here `NumpySeedSequence` is a simple implmentation of NumPy Random's [SeedSequen
 
 ```c++
 template <typename result_type = unsigned int, size_t pool_size = 4>
-class NumpySeedSequence { /*...*/ }
+class NumpySeedSequence {
+    /*...*/
+public:
+    /*...*/
+    template <typename DestIter>
+    void generate(DestIter start, DestIter finish) { /*...*/ }
+    result_type operator()() { /*...*/ }
+    /*...*/
+}
 ```
 Please check [SeedSequences](https://github.com/numpy/numpy/blob/fcafb6560e37c948a594dce36d300888148bc599/numpy/random/bit_generator.pyx#L246) to understand how this works.
 
 The `result_type` can be either `uint32_t` or `uint64_t`.
-```c++
-template <typename DestIter>
-void generate(DestIter start, DestIter finish) { /*...*/ }
-result_type operator()() { /*...*/ }
-```
 
 * `operator()` returns the next state.
 * `generate` returns a chunk of states, if the result type is `uint64_t` and the destination container type's size is less than `uint64_t` then it tries to follow roughly something like [this](https://github.com/numpy/numpy/blob/fcafb6560e37c948a594dce36d300888148bc599/numpy/random/bit_generator.pyx#L440), so basically we just reverse the bytes after converting to native endianness, which I know feels wrong but don't know *yet* how to handle it or just lazy to think about it right now as of writing :). So the behavior might get changed in the future.
