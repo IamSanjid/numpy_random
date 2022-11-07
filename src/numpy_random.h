@@ -211,15 +211,12 @@ class RandomState {
     struct has_size_fn<T, std::void_t<decltype(std::declval<T&>().size())>> : std::true_type {};
 
     template <typename T>
-    static constexpr bool valid_container() {
-        if constexpr (has_bracket_overload<T>::value) {
-            if constexpr (has_size_fn<T>::value == false && sizeof(T) % 2 != 0) {
-                return false;
-            }
-            else {
-                using type = decltype(std::declval<T>()[0]);
-                return std::is_arithmetic_v<raw_type<type>>;
-            }
+    static constexpr bool valid_custom_arithmetic() {
+        if constexpr (has_shr_overload<T>::value && has_and_overload<T>::value) {
+            using type_shr = decltype(std::declval<T>() >> ((T)0));
+            using type_and = decltype(std::declval<T>() & ((T)0));
+            return is_arithmetic_castable_v<raw_type<type_shr>> &&
+                   is_arithmetic_castable_v<raw_type<type_and>>;
         }
         else {
             return false;
@@ -227,12 +224,15 @@ class RandomState {
     }
 
     template <typename T>
-    static constexpr bool valid_custom_arithmetic() {
-        if constexpr (has_shr_overload<T>::value && has_and_overload<T>::value) {
-            using type_shr = decltype(std::declval<T>() >> ((T)0));
-            using type_and = decltype(std::declval<T>() & ((T)0));
-            return is_arithmetic_castable_v<raw_type<type_shr>> &&
-                   is_arithmetic_castable_v<raw_type<type_and>>;
+    static constexpr bool valid_container() {
+        if constexpr (has_bracket_overload<T>::value) {
+            if constexpr (has_size_fn<T>::value == false && sizeof(T) % 2 != 0) {
+                return false;
+            }
+            else {
+                using type = decltype(std::declval<T>()[0]);
+                return std::is_arithmetic_v<raw_type<type>> || valid_custom_arithmetic<type>();
+            }
         }
         else {
             return false;
@@ -278,10 +278,11 @@ public:
             return (T)0;
         }
         std::lock_guard lock{mutex};
-        return (T)legacy_beta(_internal_state._aug_state, (double) a, (double)b);
+        return (T)legacy_beta(_internal_state._aug_state, (double)a, (double)b);
     }
 
-    template <typename T, typename U, std::enable_if_t<std::is_arithmetic_v<T> && std::is_floating_point_v<U>, bool> = true>
+    template <typename T, typename U,
+              std::enable_if_t<std::is_arithmetic_v<T> && std::is_floating_point_v<U>, bool> = true>
     int64_t binomial(T n, U p) {
         if (_internal_state._bitgen == nullptr || _internal_state._binomial == nullptr) {
             return 0LL;
@@ -576,11 +577,11 @@ private:
 };
 
 /*
-NOTE: NumPy's SeedSequence is slightly different, NumPy's implementation resets it's HASHED_CONST
-after every **n_words** generation which slightly feels wrong, so this implementation doesn't reset
-it. In order to get the same behaviour as the NumPy's implementation don't reuse the same instance
-just create a new instance after every generation. (Again this should be used to set the initial
-state of a RngEngine so one time use should be enough.)
+NOTE: NumPy's SeedSequence is slightly different, NumPy's implementation resets it's hash after
+every **n_words** generation which slightly feels wrong, so this implementation doesn't reset it. In
+order to get the same behaviour as the NumPy's implementation don't reuse the same instance just
+create a new instance after every generation. (Again this should be used to set the initial state of
+a RngEngine so one time use should be enough.)
 */
 template <typename result_type = unsigned int, size_t pool_size = 4>
 class NumpySeedSequence {
