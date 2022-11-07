@@ -5,7 +5,32 @@ There's no extra dependency required. Just build and grab the `src/numpy_random.
 # Usage
 ```c++
 template <typename RngEngine>
-class RandomState { /*..*/ }
+class RandomState {
+    RngEngine& get_engine() { /*...*/ }
+    
+    /* Only these distributions are implemented for now.. */
+    template <typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
+    T beta(T a, T b) { /*...*/ }
+
+    template <typename T, typename U,
+              std::enable_if_t<std::is_arithmetic_v<T> && std::is_floating_point_v<U>, bool> = true>
+    int64_t binomial(T n, U p) { /*...*/ }
+
+    template <typename T, std::enable_if_t<std::is_arithmetic_v<T>, bool> = true>
+    T uniform(T high) { /*...*/ }
+
+    template <typename T, std::enable_if_t<std::is_arithmetic_v<T>, bool> = true>
+    T uniform(T low, T high) { /*...*/ }
+
+    template <typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
+    T rand_int(T high) { /*...*/ }
+
+    template <typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
+    T rand_int(T low, T high) { /*...*/ }
+
+    template <typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
+    T rand_n() { /*...*/ }
+}
 ```
 
 `RandomState` accepts `RngEngine` which should be a Random Engine implementation type and must implement `operator()` to return it's next state. It can return as any of the default C++ arithmetic types or custom arithmetic type(custom `uint128_t`) and must implement `operator>>`, `operator&` and also should be castable to other C++ default integral types. The `RngEngine` can also return it's next state as arithmetic container type (eg. returning an array of `uint32_t`), the container type must implement `operator[index]` and **it is recommended that `size_t size()` should be also implemented otherwise the container's size will be determined using unsafe way which will probably only work for Stack Arrays.** 
