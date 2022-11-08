@@ -5,7 +5,37 @@ There's no extra dependency required. Just build and grab the `src/numpy_random.
 # Usage
 ```c++
 template <typename RngEngine>
-class RandomState { /*..*/ }
+class RandomState {
+    /*...*/
+public:
+    /*...*/
+    RngEngine& get_engine() { /*...*/ }
+    
+    /* Only these distributions are implemented for now.. */
+    template <typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
+    T beta(T a, T b) { /*...*/ }
+
+    template <typename T, typename U,
+              std::enable_if_t<std::is_arithmetic_v<T> && std::is_floating_point_v<U>, bool> = true>
+    int64_t binomial(T n, U p) { /*...*/ }
+
+    template <typename T, std::enable_if_t<std::is_arithmetic_v<T>, bool> = true>
+    T uniform(T high) { /*...*/ }
+
+    template <typename T, std::enable_if_t<std::is_arithmetic_v<T>, bool> = true>
+    T uniform(T low, T high) { /*...*/ }
+
+    template <typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
+    T rand_int(T high) { /*...*/ }
+
+    template <typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
+    T rand_int(T low, T high) { /*...*/ }
+
+    template <typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
+    T rand_n() { /*...*/ }
+    
+    /*...*/
+}
 ```
 
 `RandomState` accepts `RngEngine` which should be a Random Engine implementation type and must implement `operator()` to return it's next state. It can return as any of the default C++ arithmetic types or custom arithmetic type(custom `uint128_t`) and must implement `operator>>`, `operator&` and also should be castable to other C++ default integral types. The `RngEngine` can also return it's next state as arithmetic container type (eg. returning an array of `uint32_t`), the container type must implement `operator[index]` and **it is recommended that `size_t size()` should be also implemented otherwise the container's size will be determined using unsafe way which will probably only work for Stack Arrays.** 
@@ -58,16 +88,19 @@ Here `NumpySeedSequence` is a simple implmentation of NumPy Random's [SeedSequen
 
 ```c++
 template <typename result_type = unsigned int, size_t pool_size = 4>
-class NumpySeedSequence { /*...*/ }
+class NumpySeedSequence {
+    /*...*/
+public:
+    /*...*/
+    template <typename DestIter>
+    void generate(DestIter start, DestIter finish) { /*...*/ }
+    result_type operator()() { /*...*/ }
+    /*...*/
+}
 ```
 Please check [SeedSequences](https://github.com/numpy/numpy/blob/fcafb6560e37c948a594dce36d300888148bc599/numpy/random/bit_generator.pyx#L246) to understand how this works.
 
 The `result_type` can be either `uint32_t` or `uint64_t`.
-```c++
-template <typename DestIter>
-void generate(DestIter start, DestIter finish) { /*...*/ }
-result_type operator()() { /*...*/ }
-```
 
 * `operator()` returns the next state.
 * `generate` returns a chunk of states, if the result type is `uint64_t` and the destination container type's size is less than `uint64_t` then it tries to follow roughly something like [this](https://github.com/numpy/numpy/blob/fcafb6560e37c948a594dce36d300888148bc599/numpy/random/bit_generator.pyx#L440), so basically we just reverse the bytes after converting to native endianness, which I know feels wrong but don't know *yet* how to handle it or just lazy to think about it right now as of writing :). So the behavior might get changed in the future.
