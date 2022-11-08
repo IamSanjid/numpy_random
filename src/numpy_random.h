@@ -289,7 +289,7 @@ public:
         }
         std::lock_guard lock{mutex};
         return legacy_random_binomial(_internal_state._bitgen, (double)p, (int64_t)n,
-                                      _internel_state._binomial);
+                                      _internal_state._binomial);
     }
 
     template <typename T, std::enable_if_t<std::is_arithmetic_v<T>, bool> = true>
