@@ -266,7 +266,10 @@ public:
         std::lock_guard lock{mutex};
         _internal_state.uninit();
     }
-
+    
+    /* This is a very bad implementation, this doesn't garuntee thread safety, 
+    because after returning the reference we can easily mutate it from different threads 
+    this lock simply does nothing. */
     RngEngine& get_engine() {
         std::lock_guard lock{mutex};
         return _engine;
